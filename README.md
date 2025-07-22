@@ -1,35 +1,39 @@
 # PDA as Signer CPI Demo
 
-This is the **minimal, best-practice demo** for using Program Derived Addresses (PDAs) as signers for Cross-Program Invocations (CPIs) in Anchor.
+This is the **ultra-simple, minimal demo** for using Program Derived Addresses (PDAs) as signers for Cross-Program Invocations (CPIs) in Anchor.
 
 ## Programs
 
 ### 1. Callee Program (`callee`)
-Receives CPI calls and requires a PDA to sign the transaction.
+Receives CPI calls and just prints a message.
 
-- **`initialize`**: Creates a PDA data account with counter = 0
-- **`increment`**: Increments the counter (requires PDA as signer)
+- **`hello`**: Prints a message, requires any signer
 
 ### 2. Caller Program (`caller`)
-Makes CPI calls to the callee program using PDA as signer.
+Makes CPI calls to the callee program using its own PDA as signer.
 
-- **`call_increment`**: Does CPI to callee's `increment` using PDA as signer
+- **`call_hello`**: Uses caller's PDA to sign CPI to callee's `hello`
 
 ## Key Concept: PDA as Signer
 
 The core pattern demonstrated:
 
-1. **Callee expects PDA as signer**:
+1. **Caller has a static PDA**:
    ```rust
-   #[account(seeds = [b"data"], bump)]
-   pub pda_signer: SystemAccount<'info>,
+   #[account(seeds = [b"caller_pda"], bump)]
+   pub caller_pda: UncheckedAccount<'info>,
    ```
 
-2. **Caller provides PDA signature**:
+2. **Caller uses PDA to sign CPI**:
    ```rust
-   let seeds = &[b"data".as_ref(), &[ctx.bumps.pda_signer]];
+   let seeds = &[b"caller_pda".as_ref(), &[ctx.bumps.caller_pda]];
    let signer = &[&seeds[..]];
    let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+   ```
+
+3. **Callee just requires any signer**:
+   ```rust
+   pub signer: Signer<'info>,
    ```
 
 ## Project Structure
@@ -61,15 +65,15 @@ anchor test
 
 ## Test Flow
 
-1. **Initialize**: Create PDA data account with counter = 0
-2. **First CPI**: Call `increment` via CPI using PDA as signer → counter = 1
-3. **Second CPI**: Call `increment` again → counter = 2
+1. **Derive PDA**: Get the caller's static PDA
+2. **CPI Call**: Call `call_hello` which uses the PDA to sign CPI to callee
+3. **Success**: Callee prints "Hello from callee! PDA signed this CPI"
 
 ## Why This Pattern?
 
+- **Ultra-Simple**: No authority, no data accounts, just PDA signing CPI
 - **Security**: Only the program can sign with its PDAs
 - **No Private Keys**: PDAs don't have private keys
 - **Deterministic**: Same seeds always produce the same PDA
-- **Program Control**: Complete control over when PDAs can sign
 
-This is the **canonical example** for PDA-as-signer CPI in Anchor. 
+This is the **absolute simplest possible demo** for PDA-as-signer CPI in Anchor. 
